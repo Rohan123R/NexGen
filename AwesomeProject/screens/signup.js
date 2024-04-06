@@ -20,18 +20,19 @@ export default function Signup() {
         password: password,
         mobile_no: phoneNumber,
       };
-    //   const response = await fetch(
-    //     http://10.2.80.150:5000/signup,
-    //     {
-    //       method: "POST",
-    //       headers: {
-    //         "Content-Type": "application/json",
-    //       },
-    //       body: JSON.stringify(signupData),
-    //     }
-    //   );
+      const response = await fetch(
+        `http://192.168.111.228:5000/signup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(signupData),
+        }
+      );
 
       if (response.status === 201) {
+        console.log("navigating to login page");
         navigation.navigate("Login");
       } else {
         const errorData = await response.json();
@@ -88,12 +89,7 @@ export default function Signup() {
           </Text>
           <View style={{ width: 24 }} />
         </View>
-        {/* <View style={{ marginBottom: 20, alignItems: "center" }}>
-          <Image
-            source={require("../assets/mobile-loginpana-1.png")}
-            style={{ width: 150, height: 150, resizeMode: "cover" }}
-          />
-        </View> */}
+        
         <View style={{ marginBottom: 20 }}>
           <TextInput
             style={{
