@@ -6,8 +6,11 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 const Stack = createNativeStackNavigator();
 import Landingpage from "./screens/landingpage";
 import Login from "./screens/login";
-import StylizedImageScreen from "./screens/StylizedImage";
+import StylizedImagePage from "./screens/StylizedImage";
 import GallerySelectionPage from "./screens/gallerypage";
+import CameraPage from "./screens/camerapage";
+// import EditProfileScreen from "./screens/demo";
+// import App from "./screens/gallerypage";
 export default function App() {
   const [hideSplashScreen, setHideSplashScreen] = React.useState(true);
   return (
@@ -15,7 +18,11 @@ export default function App() {
     <NavigationContainer>
     {hideSplashScreen ? (
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-
+      {/* <Stack.Screen
+          name="page"
+          component={EditProfileScreen}
+          options={{ headerShown: false }}
+        /> */}
          <Stack.Screen
           name="signup"
           component={Signup}
@@ -32,8 +39,8 @@ export default function App() {
           options={{ headerShown: false }}
         />
          <Stack.Screen
-          name="StylizedImage"
-          component={StylizedImageScreen}
+          name="StylizedImagePage"
+          component={StylizedImagePage}
           options={{ headerShown: true }}
         />
          <Stack.Screen
@@ -41,6 +48,12 @@ export default function App() {
           component={GallerySelectionPage}
           options={{ headerShown: false }}
         />
+         <Stack.Screen
+          name="camerapage"
+          component={CameraPage}
+          options={{ headerShown: false }}
+        />
+         
 
       </Stack.Navigator>
     ) : null}

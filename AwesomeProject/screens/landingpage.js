@@ -141,15 +141,15 @@ const Landingpage = () => {
 
       {!isCameraVisible && (
         <View style={styles.fullScreen}>
-          <Text style={styles.title}>Dashboard</Text>
+          <Text style={styles.title}>Your styles</Text>
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.button} onPress={toggleCamera}>
+            <TouchableOpacity style={styles.button} onPress={()=>navigation.navigate('camerapage')}>
               {/* Image button to switch to camera view */}
               {/* <Image
                 source={require('./assets/camera.png')} // Specify the path to your image
                 style={styles.cameraButtonImage}
               /> */}
-              <View><Text>cam</Text></View>
+              
               <Text style={styles.buttonText}>Take Photo</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.button} onPress={()=>navigation.navigate('gallerypage')}>
@@ -159,7 +159,7 @@ const Landingpage = () => {
                 style={styles.cameraButtonImage}
               /> */}
 
-              <View><Text>gal</Text></View>
+              
               <Text style={styles.buttonText}>Pick from Gallery</Text>
             </TouchableOpacity>
           </View>

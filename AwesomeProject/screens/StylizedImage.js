@@ -1,16 +1,15 @@
-import React from "react";
-import { View, Image, StyleSheet } from "react-native";
-import { useRoute } from "@react-navigation/native";
+import React from 'react';
+import { View, Image, StyleSheet } from 'react-native';
 
-const StylizedImage = () => {
-  const route = useRoute();
-  const stylizedImageData = route.params?.stylizedImageData;
+const StylizedImagePage = ({ route }) => {
+  const { stylizedImageData } = route.params;
 
   return (
     <View style={styles.container}>
-      {stylizedImageData && (
-        <Image source={{ uri: `data:image/png;base64,${stylizedImageData}` }} style={styles.stylizedImage} />
-      )}
+      <Image
+        source={{ uri: `data:image/jpeg;base64,${stylizedImageData}` }}
+        style={styles.stylizedImage}
+      />
     </View>
   );
 };
@@ -18,14 +17,15 @@ const StylizedImage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   stylizedImage: {
-    width: 200,
-    height: 200,
-    resizeMode: "contain",
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
   },
 });
 
-export default StylizedImage;
+export default StylizedImagePage;

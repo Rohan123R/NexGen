@@ -1,169 +1,140 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Image, StyleSheet, Alert } from "react-native";
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Image, Alert, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 
-const GallerySelectionPage = () => {
-    const [contentImage, setContentImage] = useState(null);
-    const [styleImage, setStyleImage] = useState(null);
-    const [contentConfirmed, setContentConfirmed] = useState(false);
-    const [styleConfirmed, setStyleConfirmed] = useState(false);
+const GallerySelectionPage = ({ navigation }) => {
+  const [contentImage, setContentImage] = useState(null);
+  const [styleImage, setStyleImage] = useState(null);
+   
+  const [stylizedImageData, setStylizedImageData] = useState(null); 
 
-    const selectImage = async (setImage, setConfirmed) => {
-        try {
-          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (status !== 'granted') {
-            Alert.alert('Permission Denied', 'Permission to access the gallery was denied.');
-            return;
-          }
-          const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.5,
-            allowsEditing: true,
-            aspect: [4, 3],
-          });
-          if (!result.cancelled) {
-            setImage(result.uri);
-            setConfirmed(true); // Set confirmation status to true when an image is selected
-          }
-        } catch (error) {
-          console.error('Failed to pick image from gallery:', error);
-          Alert.alert('Error', 'Failed to pick image from gallery: ' + (error.message || error));
-        }
-      };
-
-  const convertToBase64 = async (imageUri) => {
-    try {
-      const base64 = await FileSystem.readAsStringAsync(imageUri, { encoding: 'base64' });
-      return base64;
-    } catch (error) {
-      console.error('Failed to convert image to base64:', error);
-      return null;
+  const selectImage = async (setImage) => {
+    let permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      alert('Permission to access camera roll is required!');
+      return;
     }
+
+    let pickerResult = await ImagePicker.launchImageLibraryAsync();
+    if (pickerResult.canceled === true) {
+      return;
+    }
+
+    let imageUri = pickerResult.assets[0].uri;
+    setImage(imageUri);
   };
 
   const handleSubmit = async () => {
-    if (!contentConfirmed || !styleConfirmed) {
-      Alert.alert('Error', 'Please confirm both content and style images.');
-      return;
-    }
-
-    const contentBase64 = await convertToBase64(contentImage);
-    const styleBase64 = await convertToBase64(styleImage);
-
-    if (!contentBase64 || !styleBase64) {
-      Alert.alert('Error', 'Failed to convert images to base64.');
+    if (!contentImage || !styleImage) {
+      Alert.alert('Error', 'Please select both content and style images.');
       return;
     }
 
     try {
-      const response = await fetch('YOUR_BACKEND_URL', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ contentImage: contentBase64, styleImage: styleBase64 }),
-      });
+      // Convert content image to base64
+      let contentBase64 = await convertToBase64(contentImage);
       
-      if (!response.ok) {
-        throw new Error('Failed to post images to backend');
-      }
+      // Convert style image to base64
+      let styleBase64 = await convertToBase64(styleImage);
 
-      // Handle successful response from backend
-      // For example, display a success message or navigate to another screen
-      Alert.alert('Success', 'Images posted successfully to backend.');
-      // Reset state
+      // Send base64-encoded images to backend
+      await sendImagesToBackend(contentBase64, styleBase64);
+      
+      // Reset selected images after submitting
       setContentImage(null);
       setStyleImage(null);
+      
+      // Optionally show a success message
+      Alert.alert('Success', 'Images submitted successfully!');
     } catch (error) {
-      console.error('Error posting images to backend:', error);
-      Alert.alert('Error', 'Failed to post images to backend: ' + (error.message || error));
+      console.error('Error:', error);
+      Alert.alert('Error', 'Failed to submit images: ' + error.message);
     }
   };
 
+  const convertToBase64 = async (imageUri) => {
+    let response = await fetch(imageUri);
+    let blob = await response.blob();
+    return await blobToBase64(blob);
+  };
+
+  const blobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const sendImagesToBackend = async (contentBase64, styleBase64) => {
+    try {
+        const imageDataArray = [];
+        imageDataArray.push({ image: contentBase64 });
+        imageDataArray.push({ image: styleBase64 });
+
+        const response=await fetch('http://192.168.111.228:5000/processimage', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(imageDataArray),
+          });
+          if (!response.ok) {
+            throw new Error('Failed to send image to backend');
+          }
+          console.log("succesful");
+         
+          const responseData = await response.json();
+            const stylizedImage = responseData.stylized_image;
+            console.log(stylizedImage)
+            setStylizedImageData(stylizedImage);
+            navigation.navigate('StylizedImagePage', { stylizedImageData });
+      
+  
+      // Handle successful response from backend if needed
+    } catch (error) {
+      console.error('Error sending images to backend:', error);
+      throw error; // Propagate the error to the calling function if needed
+    }
+  };
+  
+
   return (
-    <View style={styles.container}>
-      <View style={styles.imageContainer}>
-        <TouchableOpacity style={styles.imagePickerButton} onPress={() => selectImage(setContentImage, setContentConfirmed)}>
-          <Text>Select Content Image</Text>
-        </TouchableOpacity>
-        {contentImage && (
-          <View style={styles.imagePreviewContainer}>
-            <Image source={{ uri: contentImage }} style={styles.image} />
-            {!contentConfirmed && (
-              <TouchableOpacity style={styles.confirmButton} onPress={() => setContentConfirmed(true)}>
-                <Text style={styles.confirmButtonText}>OK</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-      </View>
-      <View style={styles.imageContainer}>
-        <TouchableOpacity style={styles.imagePickerButton} onPress={() => selectImage(setStyleImage, setStyleConfirmed)}>
-          <Text>Select Style Image</Text>
-        </TouchableOpacity>
-        {styleImage && (
-          <View style={styles.imagePreviewContainer}>
-            <Image source={{ uri: styleImage }} style={styles.image} />
-            {!styleConfirmed && (
-              <TouchableOpacity style={styles.confirmButton} onPress={() => setStyleConfirmed(true)}>
-                <Text style={styles.confirmButtonText}>OK</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-      </View>
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitButtonText}>Submit</Text>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <TouchableOpacity onPress={() => selectImage(setContentImage)} style={styles.button}>
+        <Text style={[styles.buttonText, { color: 'green' }]}>Select Content Image</Text>
+      </TouchableOpacity>
+      {contentImage && <Image source={{ uri: contentImage }} style={styles.image} />}
+      
+      <TouchableOpacity onPress={() => selectImage(setStyleImage)} style={styles.button}>
+        <Text style={[styles.buttonText, { color: 'blue' }]}>Select Style Image</Text>
+      </TouchableOpacity>
+      {styleImage && <Image source={{ uri: styleImage }} style={styles.image} />}
+
+      <TouchableOpacity onPress={handleSubmit} style={[styles.button, { backgroundColor: 'purple' }]}>
+        <Text style={{ color: 'white' }}>Submit</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageContainer: {
-    marginVertical: 20,
-  },
-  imagePickerButton: {
-    backgroundColor: '#DDDDDD',
+  button: {
+    marginTop: 20,
     padding: 10,
     borderRadius: 5,
-    marginBottom: 10,
-  },
-  imagePreviewContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   image: {
     width: 200,
     height: 200,
-    resizeMode: 'cover',
-  },
-  confirmButton: {
-    backgroundColor: 'blue',
-    padding: 10,
-    borderRadius: 5,
-    marginLeft: 10,
-  },
-  confirmButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  submitButton: {
-    backgroundColor: 'green',
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 20,
-  },
-  submitButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 18,
+    marginTop: 10,
   },
 });
 
