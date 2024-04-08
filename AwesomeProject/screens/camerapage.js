@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { StyleSheet, View, Text, TouchableOpacity, Alert, Button, Image } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity, Alert, Button, Image, Modal } from "react-native";
 import { Camera } from 'expo-camera';
 import * as FileSystem from 'expo-file-system';
 
@@ -8,6 +8,8 @@ const CameraPage = ({ navigation }) => {
   const [capturedImages, setCapturedImages] = useState([]);
   const cameraRef = useRef(null);
   const [stylizedImageData, setStylizedImageData] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
   useEffect(() => {
     setIsCameraVisible(false);
   }, []);
@@ -22,11 +24,10 @@ const CameraPage = ({ navigation }) => {
         const { uri } = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: true });
         console.log('Picture taken:', uri);
 
-        // Add the captured image URI to the array
         setCapturedImages([...capturedImages, uri]);
 
-        cameraRef.current.pausePreview(); // Pause the camera preview
-        setIsCameraVisible(false); // Hide the camera view
+        cameraRef.current.pausePreview();
+        setIsCameraVisible(false);
       } catch (error) {
         console.error('Failed to take picture:', error);
         Alert.alert('Error', 'Failed to take picture: ' + (error.message || error));
@@ -36,56 +37,46 @@ const CameraPage = ({ navigation }) => {
 
   const submitImages = async () => {
     try {
-        // Create an array to store each image data
-        const imageDataArray = [];
-    
-        // Iterate through each captured image
-        await Promise.all(capturedImages.map(async (imageUri) => {
-          // Read the image file as base64
-          const base64 = await FileSystem.readAsStringAsync(imageUri, { encoding: 'base64' });
-          console.log(base64);
-    
-          // Push the base64-encoded image data to the array
-          imageDataArray.push({ image: base64 });
-        }));
-    
-        // Send the array of image data to the backend in JSON format
-        const response=await fetch('http://192.168.111.228:5000/processimage', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(imageDataArray),
-        });
-        if (!response.ok) {
-            throw new Error('Failed to send image to backend');
-          }
-          console.log("succesful");
-         
-          const responseData = await response.json();
-            const stylizedImage = responseData.stylized_image;
-            console.log(stylizedImage)
-            setStylizedImageData(stylizedImage);
-            navigation.navigate('StylizedImagePage', { stylizedImageData });
+      const imageDataArray = [];
 
-        // Clear the captured images array after submitting
-        setCapturedImages([]);
-    
-      } catch (error) {
-        console.error('Error submitting images:', error);
-        Alert.alert('Error', 'Failed to submit images: ' + (error.message || error));
+      await Promise.all(capturedImages.map(async (imageUri) => {
+        const base64 = await FileSystem.readAsStringAsync(imageUri, { encoding: 'base64' });
+        console.log(base64);
+
+        imageDataArray.push({ image: base64 });
+      }));
+
+      const response = await fetch('http://192.168.111.228:5000/processimage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(imageDataArray),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send image to backend');
       }
-    };
 
-  
+      const responseData = await response.json();
+      const stylizedImage = responseData.stylized_image;
+      setStylizedImageData(stylizedImage);
+      setModalVisible(true);
+    } catch (error) {
+      console.error('Error submitting images:', error);
+      Alert.alert('Error', 'Failed to submit images: ' + (error.message || error));
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <Button title="Capture Content" onPress={toggleCamera} />
+      <View style={styles.imagesContainer}>
+        {capturedImages.map((imageUri, index) => (
+          <Image key={index} source={{ uri: imageUri }} style={styles.capturedImage} />
+        ))}
+      </View>
+      <Button title="Capture Content"  onPress={toggleCamera} />
       <Button title="Capture Style" onPress={toggleCamera} />
-      {capturedImages.map((imageUri, index) => (
-        <Image key={index} source={{ uri: imageUri }} style={{ width: 200, height: 200, marginBottom: 10 }} />
-      ))}
       <Button title="Submit" onPress={submitImages} />
       {isCameraVisible && (
         <Camera style={styles.camera} type={Camera.Constants.Type.back} ref={cameraRef}>
@@ -93,12 +84,26 @@ const CameraPage = ({ navigation }) => {
         </Camera>
       )}
 
-      {stylizedImageData && (
-      <Image
-        source={{ uri: `data:image/jpeg;base64,${stylizedImageData}` }}
-        style={styles.stylizedImage}
-      />
-    )}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+            {stylizedImageData && (
+              <Image
+                source={{ uri: `data:image/jpeg;base64,${stylizedImageData}` }}
+                style={styles.stylizedImage}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -106,15 +111,54 @@ const CameraPage = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white', // Set background color to white
-    justifyContent: 'center',
+    backgroundColor: 'white',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  capturedImage: {
+    width: 100,
+    height: 100,
+    margin: 5,
+    borderRadius: 5,
   },
   camera: {
     flex: 1,
     width: '100%',
     justifyContent: 'flex-end',
     alignItems: 'center',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    padding: 10,
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  stylizedImage: {
+    width: 300,
+    height: 300,
+    resizeMode: 'contain',
   },
 });
 
