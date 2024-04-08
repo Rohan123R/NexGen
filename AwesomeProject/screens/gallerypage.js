@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Alert, StyleSheet, Modal } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 const GallerySelectionPage = ({ navigation }) => {
   const [contentImage, setContentImage] = useState(null);
   const [styleImage, setStyleImage] = useState(null);
-   
-  const [stylizedImageData, setStylizedImageData] = useState(null); 
+  const [modalVisible, setModalVisible] = useState(false);
+  const [stylizedImageData, setStylizedImageData] = useState(null);
 
   const selectImage = async (setImage) => {
     let permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -16,7 +16,7 @@ const GallerySelectionPage = ({ navigation }) => {
     }
 
     let pickerResult = await ImagePicker.launchImageLibraryAsync();
-    if (pickerResult.canceled === true) {
+    if (pickerResult.cancelled === true) {
       return;
     }
 
@@ -40,12 +40,7 @@ const GallerySelectionPage = ({ navigation }) => {
       // Send base64-encoded images to backend
       await sendImagesToBackend(contentBase64, styleBase64);
       
-      // Reset selected images after submitting
-      setContentImage(null);
-      setStyleImage(null);
-      
       // Optionally show a success message
-      Alert.alert('Success', 'Images submitted successfully!');
     } catch (error) {
       console.error('Error:', error);
       Alert.alert('Error', 'Failed to submit images: ' + error.message);
@@ -69,36 +64,31 @@ const GallerySelectionPage = ({ navigation }) => {
 
   const sendImagesToBackend = async (contentBase64, styleBase64) => {
     try {
-        const imageDataArray = [];
-        imageDataArray.push({ image: contentBase64 });
-        imageDataArray.push({ image: styleBase64 });
+      const imageDataArray = [];
+      imageDataArray.push({ image: contentBase64 });
+      imageDataArray.push({ image: styleBase64 });
 
-        const response=await fetch('http://192.168.111.228:5000/processimage', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(imageDataArray),
-          });
-          if (!response.ok) {
-            throw new Error('Failed to send image to backend');
-          }
-          console.log("succesful");
-         
-          const responseData = await response.json();
-            const stylizedImage = responseData.stylized_image;
-            console.log(stylizedImage)
-            setStylizedImageData(stylizedImage);
-            navigation.navigate('StylizedImagePage', { stylizedImageData });
+      const response = await fetch('http://192.168.111.228:5000/processimage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(imageDataArray),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send image to backend');
+      }
       
-  
-      // Handle successful response from backend if needed
+      const responseData = await response.json();
+      const stylizedImage = responseData.stylized_image;
+      setStylizedImageData(stylizedImage);
+      setModalVisible(true);
     } catch (error) {
       console.error('Error sending images to backend:', error);
-      throw error; // Propagate the error to the calling function if needed
+      throw error;
     }
   };
-  
 
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -115,6 +105,27 @@ const GallerySelectionPage = ({ navigation }) => {
       <TouchableOpacity onPress={handleSubmit} style={[styles.button, { backgroundColor: 'purple' }]}>
         <Text style={{ color: 'white' }}>Submit</Text>
       </TouchableOpacity>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+            {stylizedImageData && (
+              <Image
+                source={{ uri: `data:image/jpeg;base64,${stylizedImageData}` }}
+                style={styles.stylizedImage}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -135,6 +146,33 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     marginTop: 10,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    padding: 10,
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  stylizedImage: {
+    width: 300,
+    height: 300,
+    resizeMode: 'contain',
   },
 });
 

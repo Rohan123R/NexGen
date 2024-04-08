@@ -225,18 +225,20 @@ def stylize_images():
     # Encode the image data in the buffer as base64
             base64_str = base64.b64encode(image_buffer.getvalue()).decode('utf-8')
 # Now you can save the image or display it as needed
-            pil_stylized_image.save("stylized_image.jpg")
+            pil_stylized_image.save("hello1_image.jpg")
     #         time.sleep(1)
-            with open('stylized_image.jpg', "rb") as img_file:
-    #     # Read the image file as bytes
-                img_bytes = img_file.read()
+    #         with open('hello1_image.jpg', "rb") as img_file:
+    # #     # Read the image file as bytes
+    #             img_bytes = img_file.read()
         
     # # Encode the image bytes as base64 string
-            base64_str = base64.b64encode(img_bytes).decode('utf-8')
-            print(base64_str)
+            # base64_str = base64.b64encode(img_bytes).decode('utf-8')
+            # print(base64_str)
 
-
-            
+            # os.remove('hello1_image.jpg')
+            buffered = io.BytesIO()
+            pil_stylized_image.save(buffered, format="JPEG")
+            base64_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
             # Return the base64-encoded stylized image in the response
             return jsonify({"stylized_image": base64_str})
         except Exception as e:

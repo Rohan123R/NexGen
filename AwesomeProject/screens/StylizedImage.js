@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 
 const StylizedImagePage = ({ route }) => {
-  const { stylizedImageData } = route.params;
+  const [stylizedImageData, setStylizedImageData] = useState(route.params?.stylizedImageData || null);
 
   return (
     <View style={styles.container}>
-      <Image
-        source={{ uri: `data:image/jpeg;base64,${stylizedImageData}` }}
-        style={styles.stylizedImage}
-      />
+      {stylizedImageData && (
+        <Image
+          source={{ uri: `data:image/jpeg;base64,${stylizedImageData}` }}
+          style={styles.stylizedImage}
+        />
+      )}
     </View>
   );
 };
